@@ -1,6 +1,6 @@
 
 DEBUG=yes
-BLUETOOTH=yes
+BLUETOOTH=no
 MQTT=yes
 
 ifeq ($(TARGET),win32)

@@ -200,7 +200,7 @@ int jbd_can_get(jbd_session_t *s, int id, unsigned char *data, int datalen, int 
 	int retries,bytes;
 
 	dprintf(3,"id: %03x, data: %p, len: %d, chk: %d\n", id, data, datalen, chk);
-	retries = 3;
+	retries = 10;
 	do {
 		if (s->tp->write(s->tp_handle,id,0,0) < 0) return 1;
 		memset(data,0,datalen);
@@ -313,7 +313,8 @@ int jbd_rw(jbd_session_t *s, uint8_t action, uint8_t reg, uint8_t *data, int dat
 		dprintf(5,"bytes: %d\n", bytes);
 		if (bytes < 0) return -1;
 		if (!jbd_verify(buf,bytes,reg)) break;
-		sleep(1);
+		dprintf(5,"jbd_verify failed\n");
+		usleep(100 * 1000);
 	}
 	memcpy(data,&buf[4],buf[3]);
 	dprintf(5,"returning: %d\n",buf[3]);
