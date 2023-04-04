@@ -564,14 +564,8 @@ void display_info(jbd_info_t *info) {
 	if (dont_interpret) {
 		_dint("FET",info->fetstate);
 	} else {
-		temp[0] = 0;
-		p = temp;
-		if (info->fetstate & JBD_MOS_CHARGE) p += sprintf(p,"Charge");
-		if (info->fetstate & JBD_MOS_DISCHARGE) {
-			if (info->fetstate & JBD_MOS_CHARGE) p += sprintf(p,sepstr);
-			p += sprintf(p,"Discharge");
-		}
-		dstr("FET","%s",temp);
+		dbool("ChargeFETEnabled", (info->fetstate & JBD_MOS_CHARGE) == JBD_MOS_CHARGE);
+		dbool("DischargeFETEnabled", (info->fetstate & JBD_MOS_DISCHARGE) == JBD_MOS_DISCHARGE);
 	}
 #if 0
         unsigned long balancebits;
