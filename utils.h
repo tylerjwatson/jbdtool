@@ -4,6 +4,8 @@
 
 #include "cfg.h"
 
+#include <fcntl.h>
+
 float pct(float,float);
 void bindump(char *label,void *bptr,int len);
 void _bindump(long offset,void *bptr,int len);
@@ -45,7 +47,7 @@ char *log_nextname(void);
 
 #define lprintf(mask, format, args...) log_write(mask,format,## args)
 
-int lock_file(char *, int);
-void unlock_file(int);
+int lock_file(char *path, int wait, struct flock *fl);
+void unlock_file(int, struct flock *fl);
 
 #endif

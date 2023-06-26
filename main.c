@@ -21,6 +21,8 @@ typedef struct mybmm_config mybmm_config_t;
 #include <ctype.h>
 #ifndef __WIN32
 #include <dlfcn.h>
+#include <sys/param.h>
+#include <fcntl.h>
 #endif
 //#include "util.h"
 #include "parson.h"
@@ -172,6 +174,15 @@ struct jbd_params {
 };
 typedef struct jbd_params jbd_params_t;
 
+double fround(float val, int dp) {
+    int charsNeeded = 1 + snprintf(NULL, 0, "%.*f", dp, val);
+    char *buffer = malloc(charsNeeded);
+    snprintf(buffer, charsNeeded, "%.*f", dp, val);
+    float result = strtof(buffer, NULL);
+    free(buffer);
+    return result;
+}
+
 struct jbd_params *_getp(char *label) {
 	register struct jbd_params *pp;
 
@@ -234,7 +245,7 @@ void dfloat(char *label, char *format, float val) {
 	dprintf(3,"dint: label: %s, val: %f\n", label, val);
 	switch(outfmt) {
 	case 2:
-		json_object_set_number(root_object, label, val);
+		json_object_set_number(root_object, label, fround(val, 2));
 		break;
 	case 1:
 		sprintf(temp,"%%s,%s\n",format);
@@ -479,11 +490,21 @@ void display_info(jbd_info_t *info) {
 	char label[16], temp[256],*p;
 	int i;
 
+  float current = MIN(info->current, 0.01f);
+  float time = MIN(info->capacity / current, 24.f);
+  float time_full = MIN((info->fullcap - info->capacity) / current, 24.f);
+  float tte = MAX(time * -1, 0);
+  float ttf = MAX(time_full, 0);
+
 	if (strlen(info->name)) dstr("Name","%s",info->name);
 	dfloat("Voltage","%.3f",info->voltage);
 	dfloat("Current","%.3f",info->current);
+  dfloat("Power", "%.3f", info->voltage * info->current);
 	dfloat("DesignCapacity","%.3f",info->fullcap);
 	dfloat("RemainingCapacity","%.3f",info->capacity);
+  dfloat("Time","%.1f", time);
+  dfloat("TTE","%.1f", tte);
+  dfloat("TTF","%.1f", ttf);
 	_dint("PercentCapacity",info->pctcap);
 	_dint("CycleCount",info->cycles);
 	_dint("Probes",info->probes);
@@ -700,6 +721,7 @@ int main(int argc, char **argv) {
 #endif
 	char lockfile[256];
 	int lockfd,dont_wait;
+  struct flock fl;
 
 	charge = discharge = -1;
 	action = pretty = outfmt = all = reg = dump = flat = reset = dont_wait = 0;
@@ -873,7 +895,8 @@ int main(int argc, char **argv) {
 	dprintf(2,"p: %p, target: %p\n", p, target);
 	sprintf(lockfile,"/tmp/%s.lock", p+1);
 	dprintf(2,"lockfile: %s\n", lockfile);
-	lockfd = lock_file(lockfile,(dont_wait ? 0 : 1));
+	lockfd = lock_file(lockfile,(dont_wait ? 0 : 1), &fl);
+
 	dprintf(2,"lockfd: %d\n", lockfd);
 	if (lockfd < 0) {
 		log_error("unable to lock target");
@@ -1267,7 +1290,7 @@ int main(int argc, char **argv) {
 #endif
 #ifndef WINDOWS
 	dprintf(2,"unlocking target\n");
-	unlock_file(lockfd);
+	unlock_file(lockfd, &fl);
 #endif
 	json_value_free(root_value);
 	fclose(outfp);
